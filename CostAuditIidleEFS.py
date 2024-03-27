@@ -24,7 +24,7 @@ class EFS:
                         'MetricStat': {
                             'Metric': {
                                 'Namespace': 'AWS/EFS',
-                                'MetricName': 'ClientConnections',
+                                'MetricName': 'TotalIOBytes',
                                 'Dimensions': [
                                     {
                                         'Name': 'FileSystemId',
