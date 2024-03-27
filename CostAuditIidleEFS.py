@@ -56,7 +56,7 @@ class EFS:
                         'MetricStat': {
                             'Metric': {
                                 'Namespace': 'AWS/EFS',
-                                'MetricName': 'ClientConnections',
+                                'MetricName': 'TotalIOBytes',
                                 'Dimensions': [
                                     {
                                         'Name': 'FileSystemId',
@@ -76,7 +76,7 @@ class EFS:
             if len(response['MetricDataResults'][0]['Values']) == 0:
                 file_systems.append(fs_id)
         return file_systems
-    def count_unused_clients(self,region):
+    def count_unused_efs(self, region):
         file_systems = self.file_systemsIds(region)
         count = len(file_systems)
         count_connected = self.connected_clients(file_systems,region)
@@ -122,24 +122,17 @@ def main():
         region.append(region1)
     for region_new in region:
         efs = EFS()
-        unused_clients = efs.count_unused_clients(region_new)
-        filesystem = efs.filesystemIds(region_new)
-        # printing unused clients
-        print(unused_clients)
+        unused_efs = efs.count_unused_efs(region_new)
+        filesystem1 = efs.filesystemIds(region_new)
+        filesystem = str(filesystem1).replace('[', '').replace(']', '').replace('\'', '').replace('\'', '')
         price = efs.calculate_price(region_new)
-        print(price)
-        finalPrice = price * unused_clients
-        Message = 'There are  {file} idle efs'.format(file=unused_clients)
-        Message2 = 'Region {file}'.format(file=region_new)
-        Message3 = 'The total price for the {file} idle efs'.format(file=finalPrice)
-        print(Message)
-        print(Message2)
-        print(Message3)
+        finalPrice = price * unused_efs
         data = {
-            'No of Idle EFS': [unused_clients],
             'Region': [region_new],
-            'Filesystem': [filesystem],
-            'Total Price': [finalPrice]
+            'Total No. of Idle EFS': [unused_efs],
+            'File system Id\'s': [filesystem],
+            'Monthly Cost': [finalPrice],
+            'finding': 'unused'
         }
         df = pd.DataFrame(data)
         existing_data = pd.concat([existing_data,df], ignore_index=True)
