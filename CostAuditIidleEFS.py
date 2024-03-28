@@ -13,6 +13,23 @@ class EFS:
             FS.append(FileSysId['FileSystemId'])
         return FS
 
+    def DateTimeFilesystem(region):
+        efs = boto3.client('efs', region_name=region)
+        response = efs.describe_file_systems()
+        Date = []
+        Time = []
+        Timezone = []
+        for FileSysId in response['FileSystems']:
+            b = str(FileSysId['CreationTime'])
+            c = b[0:10]  # for date
+            d = b[11:19] #for time
+            e = b[19:25] #for timezone
+            Date.append(c)
+            Time.append(d)
+            Timezone.append(e)
+
+        return Date, Time, Timezone
+
     def connected_clients(self,file_system_ids,region):
         cloudwatch = boto3.client('cloudwatch',region_name=region)
         countConnected = 0
@@ -45,9 +62,14 @@ class EFS:
                 countConnected += 1
         return countConnected
 
-    def file_systemunusedIds(self,file_system_idsK,region):
+    def file_systemunusedIds(self, file_system_idsK, region):
         cloudwatch = boto3.client('cloudwatch', region_name=region)
+        efs = boto3.client('efs')
+        response2 = efs.describe_file_systems()
         file_systems = []
+        Date = []
+        Time = []
+        TimeZone = []
         for fs_id in file_system_idsK:
             response = cloudwatch.get_metric_data(
                 MetricDataQueries=[
@@ -75,7 +97,16 @@ class EFS:
             )
             if len(response['MetricDataResults'][0]['Values']) == 0:
                 file_systems.append(fs_id)
-        return file_systems
+                for FileSysId in response2['FileSystems']:
+                    if FileSysId['FileSystemId'] == fs_id:
+                        b = str(FileSysId['CreationTime'])
+                        c = b[0:10]  # for date
+                        d = b[11:19]
+                        e = b[19:25]
+                        Date.append(c)
+                        Time.append(d)
+                        TimeZone.append(e)
+        return file_systems, Date, Time, TimeZone
     def count_unused_efs(self, region):
         file_systems = self.file_systemsIds(region)
         count = len(file_systems)
@@ -84,8 +115,8 @@ class EFS:
         return count_unused
     def filesystemIds(self,region):
         file_systems = self.file_systemsIds(region)
-        IdsOfFileSystem = self.file_systemunusedIds(file_systems,region)
-        return IdsOfFileSystem
+        IdsOfFileSystem, date1, time1,timezone1 = self.file_systemunusedIds(file_systems,region)
+        return IdsOfFileSystem, date1, time1, timezone1
     def calculate_price(self,region):
         pricing = boto3.client('pricing')
         response = pricing.get_products(
@@ -123,8 +154,11 @@ def main():
     for region_new in region:
         efs = EFS()
         unused_efs = efs.count_unused_efs(region_new)
-        filesystem1 = efs.filesystemIds(region_new)
+        filesystem1,date1,time1,timezone1 = efs.filesystemIds(region_new)
         filesystem = str(filesystem1).replace('[', '').replace(']', '').replace('\'', '').replace('\'', '')
+        date2 = str(date1).replace('[', '').replace(']', '').replace('\'', '').replace('\'', '')
+        time2 = str(time1).replace('[', '').replace(']', '').replace('\'', '').replace('\'', '')
+        timezone2 = str(timezone1).replace('[', '').replace(']', '').replace('\'', '').replace('\'', '')
         price = efs.calculate_price(region_new)
         finalPrice = price * unused_efs
         data = {
@@ -132,6 +166,9 @@ def main():
             'Total No. of Idle EFS': [unused_efs],
             'File system Id\'s': [filesystem],
             'Monthly Cost': [finalPrice],
+            'CreationDate': [date2],
+            'CreationTime': [time2],
+            'Timezone': [timezone2],
             'finding': 'unused'
         }
         df = pd.DataFrame(data)
