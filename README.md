@@ -12,7 +12,7 @@ This script audits idle Amazon EFS resources and provides a cost analysis report
 **Clone the Repository:**
    ```bash
    git clone https://github.com/yourusername/CostAuditIdleEFS.git
-   cd CostAuditIdleEFS
+   cd CostAuditIdleEFS ```
 
 ## Install Dependencies
 
